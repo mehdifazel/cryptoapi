@@ -1,0 +1,15 @@
+# Crypto API - Project Rules
+
+## Stack
+- **Next.js 14** (App Router) + **TypeScript**. Run: `npm run dev` (local), `npm run build` then `npm start` (production).
+- **No CORS proxy** (allorigins, cors-anywhere, etc.). Wallex and Ramzinex are proxied via Next.js API routes (`app/api/wallex`, `app/api/ramzinex`); Nobitex is called directly.
+
+## Architecture
+- **Modular**: Shared code in `lib/shared/`, exchange-specific in `lib/nobitex/`, `lib/wallex/`, `lib/ramzinex/`. Single UI in `components/ExchangePrices.tsx` with adapters in `lib/adapters.ts`.
+- **Lightweight**: Minimal dependencies (next, react, typescript).
+
+## Key Paths
+- `app/` - Pages (home, nobitex, wallex, ramzinex, withdraw-networks) and API routes
+- `lib/shared/` - utils, tv-api, network-db
+- `lib/*/api.ts` - Exchange API clients (Nobitex direct, Wallex/Ramzinex via /api/*)
+- `public/data/nobitex-withdraw-networks.json` - Withdraw networks (optional; run `scripts/build-withdraw-db.ps1` then copy to `public/data/` to update)

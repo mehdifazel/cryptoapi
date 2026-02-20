@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nobitex Withdraw Networks Database</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .db-header { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .db-search { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0,217,255,.4); background: rgba(0,0,0,.3); color: #eee; font-size: 14px; min-width: 200px; }
+    .db-table { font-size: 13px; }
+    .db-table td { padding: 6px 12px; }
+    .db-table .networks { font-size: 12px; color: #aaa; }
+    .db-stats { color: #888; font-size: 13px; margin-bottom: 12px; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(0,217,255,.5); background: rgba(0,217,255,.15); color: #00d9ff; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: rgba(0,217,255,.25); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="exchange-nav">
+    <a href="index.html" class="nav-link">← Home</a>
+  </div>
+  <h1>Nobitex Withdraw Networks</h1>
+  <p class="subtitle">Active withdrawal networks per cryptocurrency (from Nobitex API)</p>
+  <p class="subtitle" style="margin-top:-12px;font-size:12px">Auto-refreshes every 4 hours</p>
+
+  <div class="main-content">
+    <div class="db-header">
+      <input type="text" id="searchInput" class="db-search" placeholder="Search coin (e.g. cake, btc)...">
+      <button type="button" id="refreshBtn" class="btn">Refresh from API</button>
+      <button type="button" id="downloadBtn" class="btn">Download JSON</button>
+    </div>
+    <div class="db-stats" id="stats">Loading...</div>
+    <div id="error" class="error" style="display:none"></div>
+    <table id="dbTable" class="db-table" style="display:none">
+      <thead>
+        <tr><th>Symbol</th><th>Networks</th><th>Withdraw Fee</th><th>Fee Coin</th></tr>
+      </thead>
+      <tbody id="dbBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+    var API_URL = 'https://apiv2.nobitex.ir/v2/options';
+    var db = {};
+    var filtered = [];
+
+    function showError(msg) {
+      var el = document.getElementById('error');
+      if (el) { el.textContent = msg; el.style.display = 'block'; }
+    }
+
+    function hideError() {
+      var el = document.getElementById('error');
+      if (el) el.style.display = 'none';
+    }
+
+    function parseFee(s) {
+      if (!s) return null;
+      var clean = String(s).replace(/_/g, '');
+      var num = parseFloat(clean);
+      return isFinite(num) ? num.toString() : s;
+    }
+
+    function parseApiData(data) {
+      var next = {};
+      if (data.status !== 'ok' || !Array.isArray(data.coins)) return next;
+      data.coins.forEach(function(c) {
+        var coin = (c.coin || '').toLowerCase();
+        if (!coin) return;
+        var list = c.networkList || {};
+        var networks = [];
+        var fees = {};
+        var coinUpper = (c.coin || '').toUpperCase();
+        Object.keys(list).forEach(function(k) {
+          var n = list[k];
+          if (!n || !n.withdrawEnable) return;
+          var name = n.name || n.network || '';
+          if (!name) return;
+          networks.push(name);
+          var feeAmount = parseFee(n.withdrawFee);
+          if (feeAmount) fees[name] = { amount: feeAmount, coin: coinUpper };
+        });
+        if (networks.length) next[coin] = { networks: networks, fees: Object.keys(fees).length ? fees : undefined };
+      });
+      return next;
+    }
+
+    function fetchAndBuild() {
+      var btn = document.getElementById('refreshBtn');
+      if (btn) btn.disabled = true;
+      hideError();
+      fetch(API_URL, { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          db = parseApiData(data);
+          render();
+        })
+        .catch(function(err) {
+          showError('Connection error: ' + (err.message || 'Failed to fetch'));
+          if (Object.keys(db).length) render();
+          else loadStatic();
+        })
+        .finally(function() {
+          if (btn) btn.disabled = false;
+        });
+    }
+
+    function getNetworksList(entry) {
+      if (!entry) return [];
+      return Array.isArray(entry) ? entry : (entry.networks || []);
+    }
+
+    function getFeeDisplay(entry, sym) {
+      if (!entry || !entry.fees) return { fee: '-', coin: '-' };
+      var nets = getNetworksList(entry);
+      var feeParts = nets.map(function(n) {
+        var f = entry.fees[n];
+        if (!f) return null;
+        return n + ': ' + f.amount;
+      }).filter(Boolean);
+      var coinSet = {};
+      Object.keys(entry.fees).forEach(function(n) {
+        var c = entry.fees[n].coin;
+        if (c) coinSet[c] = true;
+      });
+      var feeCol = feeParts.length ? feeParts.join('; ') : '-';
+      var coinCol = Object.keys(coinSet).length ? Object.keys(coinSet).join(', ') : (nets.length ? sym.toUpperCase() : '-');
+      return { fee: feeCol, coin: coinCol };
+    }
+
+    function render() {
+      var q = (document.getElementById('searchInput') || {}).value.trim().toLowerCase();
+      var keys = Object.keys(db).sort();
+      filtered = q ? keys.filter(function(k) { return k.indexOf(q) !== -1; }) : keys;
+
+      var tbody = document.getElementById('dbBody');
+      var table = document.getElementById('dbTable');
+      var stats = document.getElementById('stats');
+      if (!tbody || !table) return;
+
+      tbody.innerHTML = filtered.map(function(sym) {
+        var entry = db[sym];
+        var nets = getNetworksList(entry);
+        var fd = getFeeDisplay(entry, sym);
+        return '<tr><td class="pair">' + sym.toUpperCase() + '</td><td class="networks">' + nets.join(', ') + '</td><td class="networks">' + fd.fee + '</td><td class="networks">' + fd.coin + '</td></tr>';
+      }).join('');
+
+      table.style.display = 'table';
+      if (stats) stats.textContent = filtered.length + ' coins (total: ' + keys.length + ')';
+    }
+
+    function downloadJson() {
+      var blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nobitex-withdraw-networks.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // Load static JSON if available (e.g. from same folder)
+    function loadStatic() {
+      fetch('data/nobitex-withdraw-networks.json', { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          db = data;
+          render();
+        })
+        .catch(function() { fetchAndBuild(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      fetchAndBuild();
+      document.getElementById('searchInput').addEventListener('input', render);
+      document.getElementById('refreshBtn').addEventListener('click', fetchAndBuild);
+      document.getElementById('downloadBtn').addEventListener('click', downloadJson);
+      setInterval(fetchAndBuild, 4 * 60 * 60 * 1000);
+    });
+  })();
+  </script>
+</body>
+</html>

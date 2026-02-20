@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto API - Live Prices</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .home-container { max-width: 600px; margin: 60px auto; padding: 24px; text-align: center; }
+    .home-title { font-size: 28px; color: #00d9ff; margin-bottom: 32px; }
+    .exchange-links { display: flex; flex-direction: column; gap: 16px; }
+    .exchange-link { display: block; padding: 20px 24px; background: rgba(0,217,255,.15); border: 1px solid rgba(0,217,255,.3); border-radius: 12px; color: #00d9ff; text-decoration: none; font-size: 18px; font-weight: 600; transition: all .2s; }
+    .exchange-link:hover { background: rgba(0,217,255,.25); border-color: #00d9ff; transform: translateY(-2px); }
+    .exchange-link.nobitex { border-color: rgba(0,255,136,.4); color: #00ff88; }
+    .exchange-link.nobitex:hover { background: rgba(0,255,136,.15); border-color: #00ff88; }
+    .exchange-link.wallex { border-color: rgba(255,180,0,.4); color: #ffb400; }
+    .exchange-link.wallex:hover { background: rgba(255,180,0,.15); border-color: #ffb400; }
+    .exchange-desc { font-size: 13px; color: #888; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="home-container">
+    <h1 class="home-title">Crypto API – Live Prices</h1>
+    <p class="subtitle" style="margin-bottom: 32px;">Select an exchange to view live market data</p>
+    <div class="exchange-links">
+      <a href="nobitex-prices.html" class="exchange-link nobitex">
+        Nobitex
+        <span class="exchange-desc">Iranian exchange · RLS & USDT markets</span>
+      </a>
+      <a href="wallex-prices.html" class="exchange-link wallex">
+        Wallex
+        <span class="exchange-desc">Iranian exchange · TMN & USDT markets</span>
+      </a>
+      <a href="ramzinex-prices.html" class="exchange-link" style="border-color:rgba(180,100,255,.4);color:#b46fff">
+        Ramzinex
+        <span class="exchange-desc">Iranian exchange · RLS & USDT markets</span>
+      </a>
+      <a href="withdraw-networks.html" class="exchange-link" style="border-color:rgba(136,136,255,.4);color:#88f">
+        Withdraw Networks DB
+        <span class="exchange-desc">Nobitex · Active withdrawal networks per coin</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
